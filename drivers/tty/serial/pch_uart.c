@@ -21,6 +21,7 @@
 #include <linux/interrupt.h>
 #include <linux/io.h>
 #include <linux/dmi.h>
+#include <linux/slab.h>
 
 #include <linux/dmaengine.h>
 #include <linux/pch_dma.h>
