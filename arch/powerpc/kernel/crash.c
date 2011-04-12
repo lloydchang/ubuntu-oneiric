@@ -163,7 +163,7 @@ static void crash_kexec_prepare_cpus(int cpu)
 }
 
 /* wait for all the CPUs to hit real mode but timeout if they don't come in */
-#if defined(CONFIG_PPC_STD_MMU_64) && defined(CONFIG_SMP)
+#if defined(CONFIG_PPC_STD_MMU_64)
 static void crash_kexec_wait_realmode(int cpu)
 {
 	unsigned int msecs;
@@ -188,8 +188,6 @@ static void crash_kexec_wait_realmode(int cpu)
 	}
 	mb();
 }
-#else
-static inline void crash_kexec_wait_realmode(int cpu) {}
 #endif
 
 /*
@@ -255,6 +253,8 @@ void crash_kexec_secondary(struct pt_regs *regs)
 {
 	cpus_in_sr = CPU_MASK_NONE;
 }
+
+static inline void crash_kexec_wait_realmode(int cpu) {}
 #endif
 
 /*
