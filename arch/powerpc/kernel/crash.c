@@ -346,8 +346,9 @@ void default_machine_crash_shutdown(struct pt_regs *regs)
 	crash_save_cpu(regs, crashing_cpu);
 	crash_kexec_prepare_cpus(crashing_cpu);
 	cpu_set(crashing_cpu, cpus_in_crash);
+#ifdef CONFIG_PPC_STD_MMU_64
 	crash_kexec_wait_realmode(crashing_cpu);
-
+#endif
 	machine_kexec_mask_interrupts();
 
 	/*
