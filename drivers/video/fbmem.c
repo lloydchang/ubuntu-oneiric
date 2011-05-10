@@ -1423,9 +1423,10 @@ __releases(&info->lock)
 	if (fbidx >= FB_MAX)
 		return -ENODEV;
 	info = get_framebuffer_info(fbidx);
-	if (!info)
+	if (!info) {
 		request_module("fb%d", fbidx);
-	info = get_framebuffer_info(fbidx);
+		info = get_framebuffer_info(fbidx);
+	}
 	if (!info)
 		return -ENODEV;
 	mutex_lock(&info->lock);
