@@ -1769,7 +1769,7 @@ static struct dentry *__lookup_hash(struct qstr *name,
  * needs parent already locked. Doesn't follow mounts.
  * SMP-safe.
  */
-struct dentry *lookup_hash(struct nameidata *nd)
+static struct dentry *lookup_hash(struct nameidata *nd)
 {
 	return __lookup_hash(&nd->last, nd->path.dentry, nd);
 }
