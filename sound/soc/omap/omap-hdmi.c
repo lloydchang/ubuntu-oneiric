@@ -70,6 +70,7 @@ static int omap_hdmi_dai_startup(struct snd_pcm_substream *substream,
 		printk(KERN_ERR "HDMI display is not active!");
 		return -EIO;
 	}
+
 	return err;
 }
 
