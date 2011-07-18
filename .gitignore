@@ -78,4 +78,14 @@ GTAGS
 
 *.orig
 *~
+*.sh
+boot-*
+boot.scr
+boot.txt*
+panda
+build*
+stg*
+library.cfg
+patch-registry.db
+config
 \#*#
