@@ -2281,7 +2281,7 @@ int snd_soc_dapm_put_volsw(struct snd_kcontrol *kcontrol,
 			update.val = val;
 			widget->dapm->update = &update;
 
-			dapm_mixer_update_power(widget, kcontrol, connect);
+			snd_soc_dapm_mixer_update_power(widget, kcontrol, connect);
 
 			widget->dapm->update = NULL;
 		}
@@ -2372,7 +2372,7 @@ int snd_soc_dapm_put_enum_double(struct snd_kcontrol *kcontrol,
 			update.val = val;
 			widget->dapm->update = &update;
 
-			dapm_mux_update_power(widget, kcontrol, change, mux, e);
+			snd_soc_dapm_mux_update_power(widget, kcontrol, change, mux, e);
 
 			widget->dapm->update = NULL;
 		}
@@ -2433,7 +2433,7 @@ int snd_soc_dapm_put_enum_virt(struct snd_kcontrol *kcontrol,
 
 			widget->value = ucontrol->value.enumerated.item[0];
 
-			dapm_mux_update_power(widget, kcontrol, change,
+			snd_soc_dapm_mux_update_power(widget, kcontrol, change,
 					      widget->value, e);
 		}
 	}
@@ -2537,7 +2537,7 @@ int snd_soc_dapm_put_value_enum_double(struct snd_kcontrol *kcontrol,
 			update.val = val;
 			widget->dapm->update = &update;
 
-			dapm_mux_update_power(widget, kcontrol, change, mux, e);
+			snd_soc_dapm_mux_update_power(widget, kcontrol, change, mux, e);
 
 			widget->dapm->update = NULL;
 		}
