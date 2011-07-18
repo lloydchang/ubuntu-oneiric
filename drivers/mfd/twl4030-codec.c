@@ -30,7 +30,7 @@
 #include <linux/platform_device.h>
 #include <linux/i2c/twl.h>
 #include <linux/mfd/core.h>
-#include <linux/mfd/twl4030-audio.h>
+#include <linux/mfd/twl4030-codec.h>
 
 #define TWL4030_AUDIO_CELLS	2
 
