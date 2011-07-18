@@ -159,7 +159,7 @@ EXPORT_SYMBOL_GPL(twl4030_audio_get_mclk);
 static int __devinit twl4030_audio_probe(struct platform_device *pdev)
 {
 	struct twl4030_audio *audio;
-	struct twl4030_codec_data *pdata = pdev->dev.platform_data;
+	struct twl4030_platform_data *pdata = pdev->dev.platform_data;
 	struct mfd_cell *cell = NULL;
 	int ret, childs = 0;
 	u8 val;
@@ -171,7 +171,7 @@ static int __devinit twl4030_audio_probe(struct platform_device *pdev)
 
 	/* Configure APLL_INFREQ and disable APLL if enabled */
 	val = 0;
-	switch (pdata->audio_mclk) {
+	switch (pdata->audio->audio_mclk) {
 	case 19200000:
 		val |= TWL4030_APLL_INFREQ_19200KHZ;
 		break;
@@ -196,7 +196,7 @@ static int __devinit twl4030_audio_probe(struct platform_device *pdev)
 
 	twl4030_audio_dev = pdev;
 	mutex_init(&audio->mutex);
-	audio->audio_mclk = pdata->audio_mclk;
+	audio->audio_mclk = pdata->audio->audio_mclk;
 
 	/* Codec power */
 	audio->resource[TWL4030_AUDIO_RES_POWER].reg = TWL4030_REG_CODEC_MODE;
@@ -212,13 +212,14 @@ static int __devinit twl4030_audio_probe(struct platform_device *pdev)
 		cell->platform_data = pdata->audio;
 		cell->pdata_size = sizeof(*pdata->audio);
 		childs++;
-	}
-	if (pdata->vibra) {
-		cell = &audio->cells[childs];
-		cell->name = "twl4030-vibra";
-		cell->platform_data = pdata->vibra;
-		cell->pdata_size = sizeof(*pdata->vibra);
-		childs++;
+
+		if (pdata->audio->vibra) {
+			cell = &audio->cells[childs];
+			cell->name = "twl4030-vibra";
+			cell->platform_data = pdata->audio->vibra;
+			cell->pdata_size = sizeof(*pdata->audio->vibra);
+			childs++;
+		}
 	}
 
 	if (childs)
