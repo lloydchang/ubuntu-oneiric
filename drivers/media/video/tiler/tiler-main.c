@@ -83,6 +83,220 @@ static struct tmm *tmm[TILER_FORMATS];
 static u32 *dmac_va;
 static dma_addr_t dmac_pa;
 
+static void fill_map(u16 **map, int div, struct tcm_area *a, u8 c, bool ovw,
+			u8 col)
+{
+	u16 val = c | ((u16) col << 8);
+	int x, y;
+	for (y = a->p0.y; y <= a->p1.y; y++)
+		for (x = a->p0.x / div; x <= a->p1.x / div; x++)
+			if (map[y][x] == ' ' || ovw)
+				map[y][x] = val;
+}
+
+static void fill_map_pt(u16 **map, int div, struct tcm_pt *p, u8 c)
+{
+	map[p->y][p->x / div] = (map[p->y][p->x / div] & 0xff00) | c;
+}
+
+static u8 read_map_pt(u16 **map, int div, struct tcm_pt *p)
+{
+	return map[p->y][p->x / div] & 0xff;
+}
+
+static int map_width(int div, int x0, int x1)
+{
+	return (x1 / div) - (x0 / div) + 1;
+}
+
+static void text_map(u16 **map, int div, char *nice, int y, int x0, int x1,
+								u8 col)
+{
+	u16 *p = map[y] + (x0 / div);
+	int w = (map_width(div, x0, x1) - strlen(nice)) / 2;
+	if (w >= 0) {
+		p += w;
+		while (*nice)
+			*p++ = ((u16) col << 8) | (u8) *nice++;
+	}
+}
+
+static void map_1d_info(u16 **map, int div, char *nice, struct tcm_area *a,
+						u8 col)
+{
+	sprintf(nice, "%dK", tcm_sizeof(*a) * 4);
+	if (a->p0.y + 1 < a->p1.y) {
+		text_map(map, div, nice, (a->p0.y + a->p1.y) / 2, 0,
+							tiler.width - 1, col);
+	} else if (a->p0.y < a->p1.y) {
+		if (strlen(nice) < map_width(div, a->p0.x, tiler.width - 1))
+			text_map(map, div, nice, a->p0.y, a->p0.x + div,
+							tiler.width - 1, col);
+		else if (strlen(nice) < map_width(div, 0, a->p1.x))
+			text_map(map, div, nice, a->p1.y, 0, a->p1.y - div,
+									col);
+	} else if (strlen(nice) + 1 < map_width(div, a->p0.x, a->p1.x)) {
+		text_map(map, div, nice, a->p0.y, a->p0.x, a->p1.x, col);
+	}
+}
+
+static void map_2d_info(u16 **map, int div, char *nice, struct mem_info *mi,
+							u8 col)
+{
+	struct tcm_area *a = &mi->area;
+	int y = (a->p0.y + a->p1.y) / 2;
+	sprintf(nice, "(%d*%d)", tcm_awidth(*a), tcm_aheight(*a));
+	if (strlen(nice) + 1 < map_width(div, a->p0.x, a->p1.x))
+		text_map(map, div, nice, y, a->p0.x, a->p1.x, col);
+
+	sprintf(nice, "<%s%d>", mi->alloced ? "a" : "", mi->refs);
+	if (a->p1.y > a->p0.y + 1 &&
+	    strlen(nice) + 1 < map_width(div, a->p0.x, a->p1.x))
+		text_map(map, div, nice, y + 1, a->p0.x, a->p1.x, col);
+}
+
+static void write_out(u16 **map, char *fmt, int y, bool color, char *nice)
+{
+	u8 current_col = '\x0f';
+	char *o = nice;
+	u16 *d = map[y];
+
+	/* boundary */
+	if (color)
+		o += sprintf(o, "\e[0;%d%sm", (y & 8) ? 34 : 36,
+						(y & 16) ? ";1" : "");
+	o += sprintf(o, fmt, y);
+	o += sprintf(o, "%s:", color ? "\e[0;1m" : "");
+
+	/* text */
+	do {
+		u16 p = *d ?: (':' | 0x0f00);
+		u8 col_chg = current_col ^ (p >> 8);
+		if (col_chg && color) {
+			o += sprintf(o, "\e[");
+			if ((col_chg & 0x88) && (p & 0x0800) == 0) {
+				o += sprintf(o, "0;");
+				col_chg = 0x07 ^ (p >> 8);
+			}
+			if (col_chg & 0x7)
+				o += sprintf(o, "%d;", 30 + ((p >> 8) & 0x07));
+			if (col_chg & 0x70)
+				o += sprintf(o, "%d;", 40 + ((p >> 12) & 0x07));
+			if (p & 0x0800)
+				o += sprintf(o, "1;");
+			o[-1] = 'm';
+		}
+		*o++ = p & 0xff;
+		current_col = p >> 8;
+	} while (*d++);
+
+	if (color && current_col != 0x07)
+		o += sprintf(o, "\e[0m");
+	*o = 0;
+	printk(KERN_ERR "%s\n", nice);
+}
+
+static void print_allocation_map(bool color)
+{
+	int div = 2;
+	int i, j;
+	u16 **map, *global_map;
+	struct area_info *ai;
+	struct mem_info *mi;
+	struct tcm_area a, p;
+	static u8 *m2d = "abcdefghijklmnopqrstuvwxyz"
+		"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+	static u8 *a2d = ".,:;'\"`~!^-+";
+	static u8 *m1d_c = "\x47\x57\x67\xc7\xd7\xe7";
+	static u8 *m2d_c = "\x17\x27\x37\x97\xa7\xb7";
+	static u8 *a2d_c = "\x01\x02\x03\x09\x0a\x0b";
+
+	u8 *m2dp = m2d, *a2dp = a2d;
+	u8 *m2dp_c = m2d_c, *m1dp_c = m1d_c, *a2dp_c = a2d_c;
+	char *nice;
+
+	/* allocate map */
+	nice = kzalloc(tiler.width / div * 16, GFP_KERNEL);
+	map = kzalloc((tiler.height + 1) * sizeof(*map), GFP_KERNEL);
+	global_map = kzalloc((tiler.width / div + 1)
+			* (tiler.height + 1) * sizeof(*global_map), GFP_KERNEL);
+	if (!map || !global_map || !nice) {
+		printk(KERN_ERR "could not allocate map for debug print\n");
+		goto error;
+	}
+	for (i = 0; i <= tiler.height; i++) {
+		map[i] = global_map + i * (tiler.width / div + 1);
+		for (j = 0; j < tiler.width / div; j++)
+			map[i][j] = ' ';
+		map[i][j] = 0;
+	}
+
+	/* get all allocations */
+	mutex_lock(&mtx);
+
+	list_for_each_entry(mi, &blocks, global) {
+		if (mi->area.is2d) {
+			ai = mi->parent;
+			fill_map(map, div, &ai->area, *a2dp, false, *a2dp_c);
+			fill_map(map, div, &mi->area, *m2dp, true, *m2dp_c);
+			map_2d_info(map, div, nice, mi, *m2dp_c | 0xf);
+			if (!*++a2dp)
+				a2dp = a2d;
+			if (!*++a2dp_c)
+				a2dp_c = a2d_c;
+			if (!*++m2dp)
+				m2dp = m2d;
+			if (!*++m2dp_c)
+				m2dp_c = m2d_c;
+		} else {
+			bool start = read_map_pt(map, div, &mi->area.p0) == ' ';
+			bool end = read_map_pt(map, div, &mi->area.p1) == ' ';
+			tcm_for_each_slice(a, mi->area, p)
+				fill_map(map, div, &a, '=', true, *m1dp_c);
+			fill_map_pt(map, div, &mi->area.p0, start ? '<' : 'X');
+			fill_map_pt(map, div, &mi->area.p1, end ? '>' : 'X');
+			map_1d_info(map, div, nice, &mi->area, *m1dp_c | 0xf);
+			if (!*++m1dp_c)
+				m1dp_c = m1d_c;
+		}
+	}
+
+	for (i = 0; i < tiler.width / div; i++)
+		map[tiler.height][i] = ':' | 0x0f00;
+	text_map(map, div, " BEGIN TILER MAP ", tiler.height, 0,
+							tiler.width - 1, 0xf);
+
+	printk(KERN_ERR "\n");
+	write_out(map, "   ", tiler.height, color, nice);
+	for (i = 0; i < tiler.height; i++)
+		write_out(map, "%03d", i, color, nice);
+
+	text_map(map, div, ": END TILER MAP :", tiler.height, 0,
+							tiler.width - 1, 0xf);
+	write_out(map, "   ", tiler.height, color, nice);
+
+	mutex_unlock(&mtx);
+
+error:
+	kfree(map);
+	kfree(global_map);
+	kfree(nice);
+}
+
+static uint tiler_alloc_debug;
+static int tiler_alloc_debug_set(const char *val, struct kernel_param *kp)
+{
+	int r = param_set_uint(val, kp);
+	if (tiler_alloc_debug & 2) {
+		print_allocation_map(tiler_alloc_debug & 4);
+		tiler_alloc_debug &= ~2;
+	}
+	return r;
+}
+
+module_param_call(alloc_debug, tiler_alloc_debug_set, param_get_uint,
+					&tiler_alloc_debug, 0644);
+
 /*
  *  TMM connectors
  *  ==========================================================================
@@ -434,6 +648,14 @@ static struct mem_info *get_2d_area(u16 w, u16 h, u16 align, u16 offs, u16 band,
 
 			/* remove from reserved list */
 			list_del(&mi->global);
+			if (tiler_alloc_debug & 1)
+				printk(KERN_ERR "(=2d (%d-%d,%d-%d) in (%d-%d,%d-%d) prereserved)\n",
+					mi->area.p0.x, mi->area.p1.x,
+					mi->area.p0.y, mi->area.p1.y,
+			((struct area_info *) mi->parent)->area.p0.x,
+			((struct area_info *) mi->parent)->area.p1.x,
+			((struct area_info *) mi->parent)->area.p0.y,
+			((struct area_info *) mi->parent)->area.p1.y);
 			goto done;
 		}
 	}
@@ -454,6 +676,14 @@ static struct mem_info *get_2d_area(u16 w, u16 h, u16 align, u16 offs, u16 band,
 			x = _m_blk_find_fit(w, align, offs, ai, &before);
 			if (x) {
 				_m_add2area(mi, ai, x - w, w, before);
+				if (tiler_alloc_debug & 1)
+					printk(KERN_ERR "(+2d (%d-%d,%d-%d) in (%d-%d,%d-%d) existing)\n",
+						mi->area.p0.x, mi->area.p1.x,
+						mi->area.p0.y, mi->area.p1.y,
+				((struct area_info *) mi->parent)->area.p0.x,
+				((struct area_info *) mi->parent)->area.p1.x,
+				((struct area_info *) mi->parent)->area.p0.y,
+				((struct area_info *) mi->parent)->area.p1.y);
 				goto done;
 			}
 		}
@@ -465,6 +695,12 @@ static struct mem_info *get_2d_area(u16 w, u16 h, u16 align, u16 offs, u16 band,
 		      max(band, align), tcm, gi);
 	if (ai) {
 		_m_add2area(mi, ai, ai->area.p0.x + offs, w, &ai->blocks);
+		if (tiler_alloc_debug & 1)
+			printk(KERN_ERR "(+2d (%d-%d,%d-%d) in (%d-%d,%d-%d) new)\n",
+				mi->area.p0.x, mi->area.p1.x,
+				mi->area.p0.y, mi->area.p1.y,
+				ai->area.p0.x, ai->area.p1.x,
+				ai->area.p0.y, ai->area.p1.y);
 	} else {
 		/* clean up */
 		kfree(mi);
@@ -605,17 +841,37 @@ static s32 _m_free(struct mem_info *mi)
 	/* remove block from area first if 2D */
 	if (mi->area.is2d) {
 		ai = mi->parent;
-
+		if (!ai) {
+			printk(KERN_ERR "Null parent pointer!\n");
+			WARN_ON(1);
+			kfree(mi);
+			return -EFAULT;
+		}
 		/* check to see if area needs removing also */
 		if (ai && !--ai->nblocks) {
+			if (tiler_alloc_debug & 1)
+				printk(KERN_ERR "(-2d (%d-%d,%d-%d) in (%d-%d,%d-%d) last)\n",
+					mi->area.p0.x, mi->area.p1.x,
+					mi->area.p0.y, mi->area.p1.y,
+					ai->area.p0.x, ai->area.p1.x,
+					ai->area.p0.y, ai->area.p1.y);
 			res = tcm_free(&ai->area);
 			list_del(&ai->by_gid);
 			/* try to remove parent if it became empty */
 			_m_try_free_group(ai->gi);
 			kfree(ai);
 			ai = NULL;
-		}
+		} else if (tiler_alloc_debug & 1)
+			printk(KERN_ERR "(-2d (%d-%d,%d-%d) in (%d-%d,%d-%d) remaining)\n",
+				mi->area.p0.x, mi->area.p1.x,
+				mi->area.p0.y, mi->area.p1.y,
+				ai->area.p0.x, ai->area.p1.x,
+				ai->area.p0.y, ai->area.p1.y);
 	} else {
+		if (tiler_alloc_debug & 1)
+			printk(KERN_ERR "(-1d: %d,%d..%d,%d)\n",
+				mi->area.p0.x, mi->area.p0.y,
+				mi->area.p1.x, mi->area.p1.y);
 		/* remove 1D area */
 		res = tcm_free(&mi->area);
 		/* try to remove parent if it became empty */
@@ -891,7 +1147,10 @@ static struct mem_info *alloc_area(enum tiler_fmt fmt, u32 width, u32 height,
 			kfree(mi);
 			return NULL;
 		}
-
+		if (tiler_alloc_debug & 1)
+			printk(KERN_ERR "(+1d: %d,%d..%d,%d)\n",
+				mi->area.p0.x, mi->area.p0.y,
+				mi->area.p1.x, mi->area.p1.y);
 		mutex_lock(&mtx);
 		mi->parent = gi;
 		list_add(&mi->by_area, &gi->onedim);
