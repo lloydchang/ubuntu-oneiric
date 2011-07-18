@@ -431,7 +431,7 @@ static struct twl4030_codec_data twl6040_codec = {
 };
 
 static struct twl4030_audio_data twl6040_audio = {
-	.mclk		= 38400000, 
+	.audio_mclk		= 38400000, 
 
 	.vibra          = &twl6040_vibra,
 	.codec		= &twl6040_codec,

@@ -316,7 +316,7 @@ static struct twl4030_codec_data twl6040_codec = {
 
 
 static struct twl4030_audio_data twl6040_audio = {
-	.mclk           = 38400000,
+	.audio_mclk           = 38400000,
 
         .audpwron_gpio  = 127,
         .naudint_irq    = OMAP44XX_IRQ_SYS_2N,
