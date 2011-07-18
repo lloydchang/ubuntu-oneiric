@@ -305,22 +305,25 @@ static void omap4_audio_conf(void)
 		OMAP_PIN_INPUT_PULLUP);
 }
 
-static struct twl4030_codec_audio_data twl6040_audio = {
-	/* Add audio only data */
-
-	/* single-step ramp for headset and handsfree */
-	.hs_left_step   = 0x0f,
-	.hs_right_step  = 0x0f,
-	.hf_left_step   = 0x1d,
-	.hf_right_step  = 0x1d,
-};
-
 static struct twl4030_codec_data twl6040_codec = {
-	.audio		= &twl6040_audio,
-	.audpwron_gpio	= 127,
-	.naudint_irq	= OMAP44XX_IRQ_SYS_2N,
-	.irq_base	= TWL6040_CODEC_IRQ_BASE,
+
+        /* single-step ramp for headset and handsfree */
+        .hs_left_step   = 0x0f,
+        .hs_right_step  = 0x0f,
+        .hf_left_step   = 0x1d,
+        .hf_right_step  = 0x1d,
 };
+
+
+static struct twl4030_audio_data twl6040_audio = {
+	.mclk           = 38400000,
+
+        .audpwron_gpio  = 127,
+        .naudint_irq    = OMAP44XX_IRQ_SYS_2N,
+        .irq_base       = TWL6040_CODEC_IRQ_BASE,
+	.codec		= &twl6040_codec,
+};
+
 
 /*
  * Display monitor features are burnt in their EEPROM as EDID data. The EEPROM
@@ -345,7 +348,7 @@ static int __init omap4_panda_i2c_init(void)
 			TWL_COMMON_REGULATOR_VUSB |
 			TWL_COMMON_REGULATOR_CLK32KG);
 
-	omap4_panda_twldata.codec = &twl6040_codec;
+	omap4_panda_twldata.audio = &twl6040_audio;
 
 	omap4_pmic_init("twl6030", &omap4_panda_twldata);
 	omap_register_i2c_bus(2, 400, NULL, 0);

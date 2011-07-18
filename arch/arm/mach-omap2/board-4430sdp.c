@@ -354,12 +354,6 @@ static struct omap2_hsmmc_info mmc[] = {
 	{}	/* Terminator */
 };
 
-static struct regulator_consumer_supply sdp4430_vaux_supply[] = {
-	{
-		.supply = "vmmc",
-		.dev_name = "omap_hsmmc.1",
-	},
-};
 
 static int omap4_twl6030_hsmmc_late_init(struct device *dev)
 {
@@ -404,33 +398,9 @@ static int __init omap4_twl6030_hsmmc_init(struct omap2_hsmmc_info *controllers)
 	return 0;
 }
 
-static struct regulator_init_data sdp4430_vaux1 = {
-	.constraints = {
-		.min_uV			= 1000000,
-		.max_uV			= 3000000,
-		.apply_uV		= true,
-		.valid_modes_mask	= REGULATOR_MODE_NORMAL
-					| REGULATOR_MODE_STANDBY,
-		.valid_ops_mask	 = REGULATOR_CHANGE_VOLTAGE
-					| REGULATOR_CHANGE_MODE
-					| REGULATOR_CHANGE_STATUS,
-	},
-	.num_consumer_supplies  = 1,
-	.consumer_supplies      = sdp4430_vaux_supply,
-};
 
-static struct regulator_init_data sdp4430_vusim = {
-	.constraints = {
-		.min_uV			= 1200000,
-		.max_uV			= 2900000,
-		.apply_uV		= true,
-		.valid_modes_mask	= REGULATOR_MODE_NORMAL
-					| REGULATOR_MODE_STANDBY,
-		.valid_ops_mask	 = REGULATOR_CHANGE_VOLTAGE
-					| REGULATOR_CHANGE_MODE
-					| REGULATOR_CHANGE_STATUS,
-	},
-};
+/* Use the common PMIC configuration for Panda */
+static struct twl4030_platform_data sdp4430_twldata;
 
 static void omap4_audio_conf(void)
 {
@@ -438,14 +408,6 @@ static void omap4_audio_conf(void)
 	omap_mux_init_signal("sys_nirq2.sys_nirq2", \
 		OMAP_PIN_INPUT_PULLUP);
 }
-
-static struct twl4030_codec_audio_data twl6040_audio = {
-	/* single-step ramp for headset and handsfree */
-	.hs_left_step	= 0x0f,
-	.hs_right_step	= 0x0f,
-	.hf_left_step	= 0x1d,
-	.hf_right_step	= 0x1d,
-};
 
 static struct twl4030_vibra_data twl6040_vibra = {
 	.vibldrv_res = 8,
@@ -460,13 +422,24 @@ static struct twl4030_vibra_data twl6040_vibra = {
 };
 
 static struct twl4030_codec_data twl6040_codec = {
-	.audio		= &twl6040_audio,
-	.vibra		= &twl6040_vibra,
-	.audpwron_gpio	= 127,
-	.naudint_irq	= OMAP44XX_IRQ_SYS_2N,
-	.irq_base	= TWL6040_CODEC_IRQ_BASE,
+
+        /* single-step ramp for headset and handsfree */
+        .hs_left_step   = 0x0f,
+        .hs_right_step  = 0x0f,
+        .hf_left_step   = 0x1d,
+        .hf_right_step  = 0x1d,
 };
 
+static struct twl4030_audio_data twl6040_audio = {
+	.mclk		= 38400000, 
+
+	.vibra          = &twl6040_vibra,
+	.codec		= &twl6040_codec,
+
+        .audpwron_gpio  = 127,
+        .naudint_irq    = OMAP44XX_IRQ_SYS_2N,
+        .irq_base       = TWL6040_CODEC_IRQ_BASE,
+};
 
 static struct i2c_board_info __initdata sdp4430_i2c_3_boardinfo[] = {
 	{
@@ -495,7 +468,6 @@ static int __init omap4_i2c_init(void)
 			TWL_COMMON_REGULATOR_CLK32KG);
 
 	sdp4430_twldata.audio = &twl6040_audio;
-	sdp4430_twldata.codec = &twl6040_codec;
 
 	omap4_pmic_init("twl6030", &sdp4430_twldata);
 	omap_register_i2c_bus(2, 400, NULL, 0);
