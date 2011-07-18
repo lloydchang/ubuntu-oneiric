@@ -25,14 +25,15 @@
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/device.h>
+#include <linux/display.h>
 #include <sound/core.h>
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
 #include <sound/initval.h>
 #include <sound/soc.h>
+#include <video/omapdss.h>
 
 #include <plat/dma.h>
-#include <plat/display.h>
 #include <plat/omap44xx.h>
 #include "omap-pcm.h"
 #include "omap-hdmi.h"
