@@ -1554,6 +1554,15 @@ static int twl6040_probe(struct snd_soc_codec *codec)
 	}
 
 	priv->sysclk_constraints = &hp_constraints;
+
+	if (twl_codec)
+		naudint = twl_codec->naudint_irq;
+	else
+		naudint = 0;
+
+	priv->audpwron = audpwron;
+	priv->naudint = naudint;
+
 	priv->workqueue = create_singlethread_workqueue("twl6040-codec");
 	if (!priv->workqueue) {
 		ret = -ENOMEM;
