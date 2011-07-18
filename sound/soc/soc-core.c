@@ -1930,6 +1930,7 @@ static void snd_soc_instantiate_card(struct snd_soc_card *card)
 		 "%s", card->name);
 	snprintf(card->snd_card->longname, sizeof(card->snd_card->longname),
 		 "%s", card->long_name ? card->long_name : card->name);
+
 	if (card->driver_name)
 		strlcpy(card->snd_card->driver, card->driver_name,
 			sizeof(card->snd_card->driver));
