@@ -194,19 +194,17 @@ static int abe_dsp_write(struct snd_soc_platform *platform, unsigned int reg,
 
 static void abe_irq_pingpong_subroutine(u32 *data)
 {
-	struct abe_data *abe = (struct abe_data *)data;
 	u32 dst, n_bytes;
 
 	abe_read_next_ping_pong_buffer(MM_DL_PORT, &dst, &n_bytes);
 	abe_set_ping_pong_buffer(MM_DL_PORT, n_bytes);
 
 	/* Do not call ALSA function for first IRQ */
-	if (the_abe->first_irq) {
+	if (the_abe->first_irq)
 		the_abe->first_irq = 0;
-	} else {
+	else
 		if (the_abe->ping_pong_substream)
 			snd_pcm_period_elapsed(the_abe->ping_pong_substream);
-	}
 }
 
 static irqreturn_t abe_irq_handler(int irq, void *dev_id)
@@ -720,21 +718,20 @@ static int volume_get_gain(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
+#if defined(CONFIG_SND_OMAP_SOC_ABE_DSP_MODULE)
 static int abe_get_equalizer(struct snd_kcontrol *kcontrol,
 			struct snd_ctl_elem_value *ucontrol)
 {
-#if defined(CONFIG_SND_OMAP_SOC_ABE_DSP_MODULE)
 	struct soc_enum *eqc = (struct soc_enum *)kcontrol->private_value;
 
 	ucontrol->value.integer.value[0] = the_abe->equ_profile[eqc->reg];
-#endif
+
 	return 0;
 }
 
 static int abe_put_equalizer(struct snd_kcontrol *kcontrol,
 			struct snd_ctl_elem_value *ucontrol)
 {
-#if defined(CONFIG_SND_OMAP_SOC_ABE_DSP_MODULE)
 	struct soc_enum *eqc = (struct soc_enum *)kcontrol->private_value;
 	u16 val = ucontrol->value.enumerated.item[0];
 	abe_equ_t equ_params;
@@ -751,9 +748,11 @@ static int abe_put_equalizer(struct snd_kcontrol *kcontrol,
 	pm_runtime_get_sync(the_abe->dev);
 	abe_write_equalizer(eqc->reg, &equ_params);
 	pm_runtime_put_sync(the_abe->dev);
-#endif
+
 	return 1;
 }
+
+#endif
 
 int snd_soc_info_enum_ext1(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_info *uinfo)
@@ -2067,10 +2066,11 @@ static int aess_stream_event(struct snd_soc_dapm_context *dapm)
 
 static int abe_add_widgets(struct snd_soc_platform *platform)
 {
+#if defined(CONFIG_SND_OMAP_SOC_ABE_DSP_MODULE)
 	struct abe_data *abe = snd_soc_platform_get_drvdata(platform);
 	struct fw_header *hdr = &abe->hdr;
 	int i, j;
-#if defined(CONFIG_SND_OMAP_SOC_ABE_DSP_MODULE)
+
 	/* create equalizer controls */
 	for (i = 0; i < hdr->num_equ; i++) {
 		struct soc_enum *equalizer_enum = &abe->equalizer_enum[i];
@@ -2113,11 +2113,15 @@ static int abe_add_widgets(struct snd_soc_platform *platform)
 static int abe_probe(struct snd_soc_platform *platform)
 {
 	struct abe_data *abe = snd_soc_platform_get_drvdata(platform);
+#if defined(CONFIG_SND_OMAP_SOC_ABE_DSP_MODULE)
 	const struct firmware *fw;
+	int offset = 0;
+	int i;
+#endif
 #ifndef CONFIG_PM_RUNTIME
 	struct omap4_abe_dsp_pdata *pdata = priv->abe_pdata;
 #endif
-	int ret = 0, i, offset = 0;
+	int ret = 0;
 
 	abe->platform = platform;
 
@@ -2254,7 +2258,9 @@ err_fw:
 static int abe_remove(struct snd_soc_platform *platform)
 {
 	struct abe_data *abe = snd_soc_platform_get_drvdata(platform);
+#if defined(CONFIG_SND_OMAP_SOC_ABE_DSP_MODULE)
 	int i;
+#endif
 
 	free_irq(abe->irq, (void *)abe);
 
@@ -2284,7 +2290,7 @@ static int __devinit abe_engine_probe(struct platform_device *pdev)
 	struct resource *res;
 	struct omap4_abe_dsp_pdata *pdata = pdev->dev.platform_data;
 	struct abe_data *abe;
-	int ret = -EINVAL, i, k;
+	int ret = -EINVAL, i;
 
 	abe = kzalloc(sizeof(struct abe_data), GFP_KERNEL);
 	if (abe == NULL)
