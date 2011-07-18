@@ -298,6 +298,13 @@ static int __init omap4_twl6030_hsmmc_init(struct omap2_hsmmc_info *controllers)
 /* Use the common PMIC configuration for Panda */
 static struct twl4030_platform_data omap4_panda_twldata;
 
+static void omap4_audio_conf(void)
+{
+	/* twl6040 naudint */
+	omap_mux_init_signal("sys_nirq2.sys_nirq2", \
+		OMAP_PIN_INPUT_PULLUP);
+}
+
 static struct twl4030_codec_audio_data twl6040_audio = {
 	/* Add audio only data */
 };
@@ -704,6 +711,10 @@ static void __init omap4_panda_init(void)
 	register_netdevice_notifier(&omap_panda_netdev_notifier);
 
 	omap4_panda_i2c_init();
+
+//	PVRCore_Init();
+
+	omap4_audio_conf();
 	platform_add_devices(panda_devices, ARRAY_SIZE(panda_devices));
 	platform_device_register(&omap_vwlan_device);
 	board_serial_init();
