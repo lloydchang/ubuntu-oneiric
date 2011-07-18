@@ -447,10 +447,21 @@ static struct twl4030_vibra_data twl6040_vibra = {
 	.vibrmotor_res = 10,
 	.vddvibl_uV = 0,	/* fixed volt supply - VBAT */
 	.vddvibr_uV = 0,	/* fixed volt supply - VBAT */
+
+        .max_timeout    = 15000,
+        .initial_vibrate = 0,
 };
 
 static struct twl4030_audio_data twl6040_audio = {
 	.codec		= &twl6040_codec,
+	.vibra		= &twl6040_vibra,
+	.audpwron_gpio	= 127,
+	.naudint_irq	= OMAP44XX_IRQ_SYS_2N,
+	.irq_base	= TWL6040_CODEC_IRQ_BASE,
+};
+
+static struct twl4030_codec_data twl6040_codec = {
+	.audio		= &twl6040_audio,
 	.vibra		= &twl6040_vibra,
 	.audpwron_gpio	= 127,
 	.naudint_irq	= OMAP44XX_IRQ_SYS_2N,
@@ -462,6 +473,13 @@ static struct twl4030_platform_data sdp4430_twldata = {
 	/* Regulators */
 	.vusim		= &sdp4430_vusim,
 	.vaux1		= &sdp4430_vaux1,
+	.vaux2		= &sdp4430_vaux2,
+	.vaux3		= &sdp4430_vaux3,
+	.clk32kg	= &sdp4430_clk32kg,
+	.usb		= &omap4_usbphy_data,
+
+	/* children */
+	.codec		= &twl6040_codec,
 };
 
 static struct i2c_board_info __initdata sdp4430_i2c_3_boardinfo[] = {
