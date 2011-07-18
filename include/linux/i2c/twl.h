@@ -681,6 +681,12 @@ struct twl4030_vibra_data {
 	unsigned int vibrmotor_res;	/* right motor resistance */
 	int vddvibl_uV;			/* VDDVIBL volt, set 0 for fixed reg */
 	int vddvibr_uV;			/* VDDVIBR volt, set 0 for fixed reg */
+
+	/* timed-output based implementations */
+	int max_timeout;
+	int initial_vibrate;
+	int (*init)(void);
+	void (*exit)(void);
 };
 
 struct twl4030_audio_data {
