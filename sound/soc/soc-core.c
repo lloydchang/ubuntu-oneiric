@@ -2394,8 +2394,7 @@ static int soc_new_pcm(struct snd_soc_pcm_runtime *rtd, int num)
 		goto out;
 
 	if (platform->driver->pcm_new) {
-		ret = platform->driver->pcm_new(rtd->card->snd_card,
-						codec_dai, pcm);
+		ret = platform->driver->pcm_new(rtd);
 		if (ret < 0) {
 			pr_err("asoc: platform pcm constructor failed\n");
 			return ret;

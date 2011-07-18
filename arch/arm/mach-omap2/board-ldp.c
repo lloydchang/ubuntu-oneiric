@@ -175,13 +175,6 @@ static struct omap_smsc911x_platform_data smsc911x_cfg = {
 	.flags		= SMSC911X_USE_32BIT,
 };
 
-static struct omap_smsc911x_platform_data smsc911x_cfg = {
-	.cs             = LDP_SMSC911X_CS,
-	.gpio_irq       = LDP_SMSC911X_GPIO,
-	.gpio_reset     = -EINVAL,
-	.flags		= SMSC911X_USE_32BIT,
-};
-
 static inline void __init ldp_init_smsc911x(void)
 {
 	gpmc_smsc911x_init(&smsc911x_cfg);
