@@ -452,14 +452,6 @@ static struct twl4030_vibra_data twl6040_vibra = {
         .initial_vibrate = 0,
 };
 
-static struct twl4030_audio_data twl6040_audio = {
-	.codec		= &twl6040_codec,
-	.vibra		= &twl6040_vibra,
-	.audpwron_gpio	= 127,
-	.naudint_irq	= OMAP44XX_IRQ_SYS_2N,
-	.irq_base	= TWL6040_CODEC_IRQ_BASE,
-};
-
 static struct twl4030_codec_data twl6040_codec = {
 	.audio		= &twl6040_audio,
 	.vibra		= &twl6040_vibra,
@@ -468,19 +460,6 @@ static struct twl4030_codec_data twl6040_codec = {
 	.irq_base	= TWL6040_CODEC_IRQ_BASE,
 };
 
-static struct twl4030_platform_data sdp4430_twldata = {
-	.audio		= &twl6040_audio,
-	/* Regulators */
-	.vusim		= &sdp4430_vusim,
-	.vaux1		= &sdp4430_vaux1,
-	.vaux2		= &sdp4430_vaux2,
-	.vaux3		= &sdp4430_vaux3,
-	.clk32kg	= &sdp4430_clk32kg,
-	.usb		= &omap4_usbphy_data,
-
-	/* children */
-	.codec		= &twl6040_codec,
-};
 
 static struct i2c_board_info __initdata sdp4430_i2c_3_boardinfo[] = {
 	{
@@ -507,6 +486,10 @@ static int __init omap4_i2c_init(void)
 			TWL_COMMON_REGULATOR_VCXIO |
 			TWL_COMMON_REGULATOR_VUSB |
 			TWL_COMMON_REGULATOR_CLK32KG);
+
+	sdp4430_twldata.audio = &twl6040_audio;
+	sdp4430_twldata.codec = &twl6040_codec;
+
 	omap4_pmic_init("twl6030", &sdp4430_twldata);
 	omap_register_i2c_bus(2, 400, NULL, 0);
 	omap_register_i2c_bus(3, 400, sdp4430_i2c_3_boardinfo,
