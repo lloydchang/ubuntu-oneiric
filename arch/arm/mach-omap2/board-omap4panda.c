@@ -709,6 +709,7 @@ static struct notifier_block omap_panda_netdev_notifier = {
 static void __init omap4_panda_init(void)
 {
 	int package = OMAP_PACKAGE_CBS;
+//	extern int PVRCore_Init(void);
 
 	if (omap_rev() == OMAP4430_REV_ES1_0)
 		package = OMAP_PACKAGE_CBL;
@@ -724,6 +725,7 @@ static void __init omap4_panda_init(void)
 //	PVRCore_Init();
 
 	omap4_audio_conf();
+
 	platform_add_devices(panda_devices, ARRAY_SIZE(panda_devices));
 	platform_device_register(&omap_vwlan_device);
 	board_serial_init();
