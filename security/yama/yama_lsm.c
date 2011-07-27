@@ -326,18 +326,6 @@ int yama_inode_follow_link(struct dentry *dentry,
 	return rc;
 }
 
-static int yama_generic_permission(struct inode *inode, int mask)
-{
-	int retval;
-
-	if (inode->i_op->permission)
-		retval = inode->i_op->permission(inode, mask, 0);
-	else
-		retval = generic_permission(inode, mask, 0,
-				inode->i_op->check_acl);
-	return retval;
-}
-
 /**
  * yama_path_link - verify that hardlinking is allowed
  * @old_dentry: the source inode/dentry to hardlink from
@@ -369,7 +357,7 @@ int yama_path_link(struct dentry *old_dentry, struct path *new_dir,
 	if (cred->fsuid != inode->i_uid &&
 	    (!S_ISREG(mode) || (mode & S_ISUID) ||
 	     ((mode & (S_ISGID | S_IXGRP)) == (S_ISGID | S_IXGRP)) ||
-	     (yama_generic_permission(inode, MAY_READ | MAY_WRITE))) &&
+	     (generic_permission(inode, MAY_READ | MAY_WRITE, 0, NULL))) &&
 	    !capable(CAP_FOWNER)) {
 		char name[sizeof(current->comm)];
 		printk_ratelimited(KERN_INFO "non-accessible hardlink"
