@@ -18,7 +18,6 @@
 #include <linux/slab.h>
 #include <linux/pci.h>
 #include <linux/gpio.h>
-#include <linux/slab.h>
 
 #define PCI_VENDOR_ID_ROHM             0x10DB
 
