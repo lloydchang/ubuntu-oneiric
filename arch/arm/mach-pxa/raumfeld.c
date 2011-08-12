@@ -596,6 +596,18 @@ static void __init raumfeld_lcd_init(void)
 {
 	int ret;
 
+	pxa_set_fb_info(NULL, &raumfeld_sharp_lcd_info);
+
+	/* Hardware revision 2 has the backlight regulator controlled
+	 * by an LT3593, earlier and later devices use PWM for that. */
+	if ((system_rev & 0xff) == 2) {
+		platform_device_register(&raumfeld_lt3593_device);
+	} else {
+		mfp_cfg_t raumfeld_pwm_pin_config = GPIO17_PWM0_OUT;
+		pxa3xx_mfp_config(&raumfeld_pwm_pin_config, 1);
+		platform_device_register(&raumfeld_pwm_backlight_device);
+	}
+
 	ret = gpio_request(GPIO_TFT_VA_EN, "display VA enable");
 	if (ret < 0)
 		pr_warning("Unable to request GPIO_TFT_VA_EN\n");
