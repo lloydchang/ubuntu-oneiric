@@ -1,0 +1,14 @@
+# arch	version		flavour		installedname			suffix	bdep
+amd64	3.0.0-13	generic		3.0.0-13-generic		-	
+amd64	3.0.0-13	virtual		3.0.0-13-virtual		-	
+
+i386	3.0.0-13	generic		3.0.0-13-generic		-	
+i386	3.0.0-13	generic-pae	3.0.0-13-generic-pae	-	
+i386	3.0.0-13	virtual		3.0.0-13-virtual		-	
+
+armel	3.0.0-13	omap		3.0.0-13-omap		-
+
+# Ports
+# arch	version		flavour		installedname			suffix	bdep
+powerpc	3.0.0-13	powerpc			3.0.0-13-powerpc		-	
+powerpc	3.0.0-13	powerpc64-smp		3.0.0-13-powerpc64-smp	-	

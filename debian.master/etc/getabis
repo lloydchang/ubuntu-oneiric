@@ -6,8 +6,8 @@ repo_list=(
 )
 
 getall armel omap
-getall amd64 generic server virtual
-getall i386 generic generic-pae virtual
+getall amd64 generic server virtual za
+getall i386 generic generic-pae virtual za
 
 # Ports arches and flavours.
 getall powerpc powerpc powerpc-smp powerpc64-smp
