@@ -1797,6 +1797,66 @@ static noinline int btrfs_ioctl_ino_lookup(struct file *file,
 	return ret;
 }
 
+static int btrfs_ioctl_cleaner_wait(struct btrfs_root *root, void __user *arg)
+{
+        struct btrfs_ioctl_cleaner_wait_args *bicwa;
+        long remainingjiffies;
+        int err;
+
+	bicwa = memdup_user(arg, sizeof(*bicwa));
+	if (IS_ERR(bicwa))
+		return PTR_ERR(bicwa);
+
+        err = -EINVAL;
+
+        /* flag bit 0x04 means, error on unknown flag.
+           the highest possible valid flag value at this rev is 0x07. */
+        if (((bicwa->flags & 4) == 4) &&( bicwa->flags > 7) ){
+	    kfree(bicwa);
+            return err;
+        };
+
+#define BICW_TEST ( \
+       /* flag bit 0x01: suppress wait for dead_roots */                    \
+       (bicwa->flags & 1 == 1 || ( list_empty(&root->fs_info->dead_roots))  \
+              && ( atomic_read(&root->fs_info->dead_roots_cleaners) == 0 ))  \
+                                                                            \
+       /* flag bit 0x02: wait for delayed iputs */                          \
+  &&   (bicwa->flags & 2 == 0 || list_empty(&root->fs_info->delayed_iputs)) \
+                                                                            \
+       /* 0x04 is consumed earlier */                                       \
+       /* add the next one at 0x08 */                                       \
+)
+
+        if (bicwa->ms > 0)
+	{
+            unsigned long millisecs = bicwa->ms;
+            remainingjiffies = wait_event_interruptible_timeout(
+                 root->fs_info->cleaner_notification_registration,
+                 BICW_TEST, msecs_to_jiffies(millisecs)
+            );
+            if (remainingjiffies > 0)
+                  err = 0;
+            else if (remainingjiffies < 0 )
+                  err = -EAGAIN;
+            else
+                  err = -ETIME;
+        }
+	else
+	{
+            err = wait_event_interruptible(
+                 root->fs_info->cleaner_notification_registration,
+                 BICW_TEST
+            );
+        };
+
+	kfree(bicwa);
+        return err;
+
+#undef BICWATEST
+}
+
+
 static noinline int btrfs_ioctl_snap_destroy(struct file *file,
 					     void __user *arg)
 {
@@ -2859,6 +2919,8 @@ long btrfs_ioctl(struct file *file, unsigned int
 		return btrfs_ioctl_snap_create(file, argp, 1);
 	case BTRFS_IOC_SNAP_DESTROY:
 		return btrfs_ioctl_snap_destroy(file, argp);
+	case BTRFS_IOC_CLEANER_WAIT:
+		return btrfs_ioctl_cleaner_wait(root, argp);
 	case BTRFS_IOC_SUBVOL_GETFLAGS:
 		return btrfs_ioctl_subvol_getflags(file, argp);
 	case BTRFS_IOC_SUBVOL_SETFLAGS:

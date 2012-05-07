@@ -1474,7 +1474,9 @@ static int cleaner_kthread(void *arg)
 		if (!(root->fs_info->sb->s_flags & MS_RDONLY) &&
 		    mutex_trylock(&root->fs_info->cleaner_mutex)) {
 			btrfs_run_delayed_iputs(root);
+			wake_up_all(&root->fs_info->cleaner_notification_registration);
 			btrfs_clean_old_snapshots(root);
+			wake_up_all(&root->fs_info->cleaner_notification_registration);
 			mutex_unlock(&root->fs_info->cleaner_mutex);
 			btrfs_run_defrag_inodes(root->fs_info);
 		}
@@ -1608,6 +1610,8 @@ struct btrfs_root *open_ctree(struct super_block *sb,
 	INIT_RADIX_TREE(&fs_info->fs_roots_radix, GFP_ATOMIC);
 	INIT_LIST_HEAD(&fs_info->trans_list);
 	INIT_LIST_HEAD(&fs_info->dead_roots);
+	atomic_set(&fs_info->dead_roots_cleaners,0);
+	init_waitqueue_head(&fs_info->cleaner_notification_registration);
 	INIT_LIST_HEAD(&fs_info->delayed_iputs);
 	INIT_LIST_HEAD(&fs_info->hashers);
 	INIT_LIST_HEAD(&fs_info->delalloc_inodes);
@@ -2472,7 +2476,9 @@ int btrfs_commit_super(struct btrfs_root *root)
 
 	mutex_lock(&root->fs_info->cleaner_mutex);
 	btrfs_run_delayed_iputs(root);
+	wake_up_all(&root->fs_info->cleaner_notification_registration);
 	btrfs_clean_old_snapshots(root);
+	wake_up_all(&root->fs_info->cleaner_notification_registration);
 	mutex_unlock(&root->fs_info->cleaner_mutex);
 
 	/* wait until ongoing cleanup work done */

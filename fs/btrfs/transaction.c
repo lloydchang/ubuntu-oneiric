@@ -1443,6 +1443,7 @@ int btrfs_clean_old_snapshots(struct btrfs_root *root)
 	LIST_HEAD(list);
 	struct btrfs_fs_info *fs_info = root->fs_info;
 
+	atomic_inc(&fs_info->dead_roots_cleaners);
 	spin_lock(&fs_info->trans_lock);
 	list_splice_init(&fs_info->dead_roots, &list);
 	spin_unlock(&fs_info->trans_lock);
@@ -1459,5 +1460,6 @@ int btrfs_clean_old_snapshots(struct btrfs_root *root)
 		else
 			btrfs_drop_snapshot(root, NULL, 1);
 	}
+	atomic_dec(&fs_info->dead_roots_cleaners);
 	return 0;
 }

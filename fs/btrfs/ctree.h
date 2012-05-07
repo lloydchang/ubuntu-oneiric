@@ -975,6 +975,8 @@ struct btrfs_fs_info {
 	struct list_head trans_list;
 	struct list_head hashers;
 	struct list_head dead_roots;
+	atomic_t dead_roots_cleaners ;
+	wait_queue_head_t cleaner_notification_registration;
 	struct list_head caching_block_groups;
 
 	spinlock_t delayed_iput_lock;
